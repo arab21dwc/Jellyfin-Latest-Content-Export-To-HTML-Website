@@ -1,4 +1,6 @@
 # Jellyfin-Latest-Content-Export-To-HTML-Website
+![image](https://github.com/user-attachments/assets/81d78080-b4f2-423a-a7af-88958b708fb1)
+![image](https://github.com/user-attachments/assets/535e9a46-d7c4-4860-a8b9-0a8880f10081)
 
 This script connects to a Jellyfin server, retrieves the latest added **movies** and **TV episodes**, and generates a mobile-friendly, auto-refreshing HTML page displaying media posters, titles, genres, season info, and descriptions.
 
