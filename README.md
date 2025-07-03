@@ -45,7 +45,7 @@ You must replace these with valid Jellyfin server credentials:
 ## ▶️ How to Run
 
 ```bash
-python jellyfin_updater.py
+python main.py
 ```
 
 When started, you will be prompted:
