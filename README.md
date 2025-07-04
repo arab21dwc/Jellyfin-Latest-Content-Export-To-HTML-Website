@@ -20,8 +20,8 @@ This script connects to a Jellyfin server, retrieves the latest added **Movies**
   - Description/Overview
   - Rating
   - Runtime
-  - Added TMDB/IMDB Links to cards
-  - Added Latest TV Series Tab
+  - TMDB/IMDB Links to cards
+  - Latest TV Series Tab
 - 📱 Mobile-friendly layout with responsive design
 - 🔁 HTML auto-refresh interval (user-defined)
 - 🔄 Script update interval (user-defined)
