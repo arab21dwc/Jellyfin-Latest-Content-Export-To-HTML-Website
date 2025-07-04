@@ -4,12 +4,6 @@ Desktop View
 ![image](https://github.com/user-attachments/assets/7a359777-1efb-478a-9a7c-7928873ef0e7)
 ![image](https://github.com/user-attachments/assets/08949e19-5503-40f1-b740-c58fb18d86e7)
 
-Mobile View
-![image](https://github.com/user-attachments/assets/6d3606ef-cc46-4924-b0a9-53c4a2e7a068)
-![image](https://github.com/user-attachments/assets/7d75ac50-f5cf-4e58-9f07-d89b042d533b)
-![image](https://github.com/user-attachments/assets/5ce4d279-8f02-4e9a-af57-af29231796e6)
-
-
 This script connects to a Jellyfin server, retrieves the latest added **Movies** and **Series** **Episodes**, and generates a mobile-friendly, auto-refreshing HTML page displaying media posters, titles, genres, season info, and descriptions.
 
 ---
@@ -27,6 +21,7 @@ This script connects to a Jellyfin server, retrieves the latest added **Movies**
   - Rating
   - Runtime
   - Added TMDB/IMDB Links to cards
+  - Added Latest TV Series Tab
 - 📱 Mobile-friendly layout with responsive design
 - 🔁 HTML auto-refresh interval (user-defined)
 - 🔄 Script update interval (user-defined)
