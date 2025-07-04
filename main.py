@@ -1,5 +1,9 @@
 import requests
 import time
+import urllib3
+import hashlib
+import json
+from datetime import datetime
 
 # === Configuration ===
 API_URL = "https://your-jellyfin-url:port"
@@ -17,9 +21,8 @@ PARAMS = {
     "IncludeItemTypes": "Movie,Series,Episode",
     "Limit": 50,
     "Recursive": "true",
-    "Fields": "PrimaryImageAspectRatio,SeriesName,SeasonNumber,IndexNumber,Genres,ProductionYear,SeasonName,Overview"
+    "Fields": "PrimaryImageAspectRatio,SeriesName,SeasonNumber,IndexNumber,Genres,ProductionYear,SeasonName,Overview,CommunityRating"
 }
-
 
 def get_interval(prompt, default):
     try:
@@ -34,7 +37,6 @@ def get_interval(prompt, default):
         print(f"Invalid input. Using default value: {default}")
         return default
 
-
 def fetch_latest_items():
     url = f"{API_URL}/Users/{USER_ID}/Items"
     try:
@@ -45,10 +47,23 @@ def fetch_latest_items():
         print(f"[ERROR] Failed to fetch items: {e}")
         return []
 
+def compute_items_hash(items):
+    serialized = json.dumps(items, sort_keys=True)
+    return hashlib.md5(serialized.encode("utf-8")).hexdigest()
+
+def load_last_hash():
+    try:
+        with open(CHECKSUM_FILE, "r") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return ""
+
+def save_current_hash(hash_val):
+    with open(CHECKSUM_FILE, "w") as f:
+        f.write(hash_val)
 
 def build_poster_url(item_id):
     return f"{API_URL}/Items/{item_id}/Images/Primary?api_key={API_KEY}"
-
 
 def format_episode_title(item):
     series_name = item.get("SeriesName", "")
@@ -73,12 +88,10 @@ def format_episode_title(item):
 
     return " - ".join(title_parts)
 
-
 def format_genres(genres):
     if not genres:
         return ""
     return '<div class="genres">' + ', '.join(genres[:3]) + '</div>'
-
 
 def format_year_season(item):
     year = item.get("ProductionYear")
@@ -91,13 +104,11 @@ def format_year_season(item):
         details.append(f"Season: {season}")
     return f'<div class="details">{" | ".join(details)}</div>' if details else ""
 
-
 def format_season_name(item):
     season_name = item.get("SeasonName")
     if not season_name:
         return ""
     return f'<div class="season-name">{season_name}</div>'
-
 
 def format_description(item):
     desc = item.get("Overview", "")
@@ -105,14 +116,20 @@ def format_description(item):
         return ""
     return f'<div class="description">{desc}</div>'
 
+def format_rating(item):
+    rating = item.get("CommunityRating")
+    if not rating:
+        return ""
+    return f'<div class="rating">⭐ {rating:.1f}</div>'
 
-def generate_html(movies, episodes, html_refresh_interval):
+def generate_html(movies, episodes, series, html_refresh_interval):
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     html = f"""<!DOCTYPE html>
-<html lang="en">
+<html lang=\"en\">
 <head>
-  <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="{html_refresh_interval}">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset=\"UTF-8\">
+  <meta http-equiv=\"refresh\" content=\"{html_refresh_interval}\">
+  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
   <title>Jellyfin Latest Media</title>
   <style>
     body {{
@@ -122,11 +139,8 @@ def generate_html(movies, episodes, html_refresh_interval):
       color: #fff;
       font-family: system-ui, sans-serif;
     }}
-    h1 {{
-      text-align: center;
-      font-size: 2em;
-      margin-bottom: 40px;
-    }}
+    h1 {{ text-align: center; font-size: 2em; margin-bottom: 10px; }}
+    .timestamp {{ text-align: center; font-size: 0.9em; color: #aaa; margin-bottom: 30px; }}
     h2 {{
       font-size: 1.5em;
       margin-top: 40px;
@@ -151,14 +165,8 @@ def generate_html(movies, episodes, html_refresh_interval):
       box-shadow: 0 4px 10px rgba(0,0,0,0.5);
       transition: transform 0.2s ease;
     }}
-    .card:hover {{
-      transform: scale(1.05);
-    }}
-    .card img {{
-      width: 100%;
-      height: auto;
-      display: block;
-    }}
+    .card:hover {{ transform: scale(1.05); }}
+    .card img {{ width: 100%; height: auto; display: block; }}
     .card h3 {{
       padding: 10px 10px 0;
       font-size: 15px;
@@ -186,63 +194,52 @@ def generate_html(movies, episodes, html_refresh_interval):
       font-size: 13px;
       color: #ccc;
       text-align: center;
-      font-style: normal;
       line-height: 1.4;
       white-space: normal;
-      word-wrap: break-word;
     }}
-    @media (max-width: 600px) {{
-      .card {{
-        width: 100%;
-      }}
+    .rating {{
+      padding: 4px 10px;
+      font-size: 13px;
+      color: #f39c12;
+      text-align: center;
     }}
+    @media (max-width: 600px) {{ .card {{ width: 100%; }} }}
   </style>
 </head>
 <body>
   <h1>Latest Added Media</h1>
+  <div class="timestamp">Last Updated: {timestamp}</div>
 """
-
-    html += "<h2>Movies</h2>\n<div class='grid'>\n"
-    for item in movies:
-        name = item.get("Name", "Unknown")
-        genres = format_genres(item.get("Genres", []))
-        details = format_year_season(item)
-        poster_url = build_poster_url(item.get("Id"))
-        season_name = format_season_name(item)
-        description = format_description(item)
-        html += f"""
-    <div class="card">
-      <img src="{poster_url}" alt="{name}">
+    def add_cards(title, items, name_fn):
+        nonlocal html
+        html += f"<h2>{title}</h2>\n<div class='grid'>\n"
+        for item in items:
+            name = name_fn(item)
+            genres = format_genres(item.get("Genres", []))
+            details = format_year_season(item)
+            poster_url = build_poster_url(item.get("Id"))
+            season_name = format_season_name(item)
+            description = format_description(item)
+            rating = format_rating(item)
+            html += f"""
+    <div class=\"card\">
+      <img src=\"{poster_url}\" alt=\"{name}\">
       <h3>{name}</h3>
       {season_name}
       {description}
       {genres}
       {details}
+      {rating}
     </div>
 """
-    html += "</div>\n"
+        html += "</div>\n"
 
-    html += "<h2>TV Shows</h2>\n<div class='grid'>\n"
-    for item in episodes:
-        name = format_episode_title(item)
-        genres = format_genres(item.get("Genres", []))
-        details = format_year_season(item)
-        poster_url = build_poster_url(item.get("Id"))
-        season_name = format_season_name(item)
-        description = format_description(item)
-        html += f"""
-    <div class="card">
-      <img src="{poster_url}" alt="{name}">
-      <h3>{name}</h3>
-      {season_name}
-      {description}
-      {genres}
-      {details}
-    </div>
-"""
-    html += "</div>\n</body>\n</html>"
+    add_cards("Movies", movies, lambda x: x.get("Name", "Unknown"))
+    add_cards("Series", series, lambda x: x.get("Name", "Unknown"))
+    add_cards("Episodes", episodes, format_episode_title)
+
+    html += "</body>\n</html>"
     return html
-
 
 def main(refresh_interval):
     items = fetch_latest_items()
@@ -250,18 +247,25 @@ def main(refresh_interval):
         print("No media found.")
         return
 
+    current_hash = compute_items_hash(items)
+    last_hash = load_last_hash()
+
+    if current_hash == last_hash:
+        print("[✔] No new items. HTML not updated.")
+        return
+
     movies = [item for item in items if item.get("Type") == "Movie"]
     episodes = [item for item in items if item.get("Type") == "Episode"]
+    series = [item for item in items if item.get("Type") == "Series"]
 
-    html_content = generate_html(movies, episodes, refresh_interval)
+    html_content = generate_html(movies, episodes, series, refresh_interval)
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         f.write(html_content)
 
-    print(f"[✔] HTML page updated: {OUTPUT_FILE}")
-
+    save_current_hash(current_hash)
+    print(f"[✔] New items found. HTML page updated: {OUTPUT_FILE}")
 
 if __name__ == "__main__":
-    import urllib3
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     script_interval = get_interval("Enter how often to update the HTML for Library changes (in minutes): ", 2)
@@ -269,9 +273,9 @@ if __name__ == "__main__":
 
     try:
         while True:
-            print("[⏳] Updating Jellyfin HTML output...")
+            print("[⏳] Checking for new Jellyfin items...")
             main(html_refresh)
-            print(f"[⏱] Waiting {script_interval} minutes before next update...")
+            print(f"[⏱] Waiting {script_interval} minutes before next check...")
             time.sleep(script_interval * 60)
     except KeyboardInterrupt:
         print("\n[👋] Stopped Jellyfin auto-updater.")
