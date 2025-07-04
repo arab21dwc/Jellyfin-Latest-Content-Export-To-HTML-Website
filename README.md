@@ -2,23 +2,29 @@
 ![image](https://github.com/user-attachments/assets/81d78080-b4f2-423a-a7af-88958b708fb1)
 ![image](https://github.com/user-attachments/assets/535e9a46-d7c4-4860-a8b9-0a8880f10081)
 
-This script connects to a Jellyfin server, retrieves the latest added **movies** and **TV episodes**, and generates a mobile-friendly, auto-refreshing HTML page displaying media posters, titles, genres, season info, and descriptions.
+This script connects to a Jellyfin server, retrieves the latest added **Movies** and **Series** **Episodes**, and generates a mobile-friendly, auto-refreshing HTML page displaying media posters, titles, genres, season info, and descriptions.
 
 ---
 
 ## 📌 Features
 
-- ✅ Pulls latest 50 movies and episodes from a Jellyfin server.
-- 📄 Displays:
+- ✅ Pulls latest 50 movies, seasons and episodes from a Jellyfin server.
+- 🎬 Displays:
   - Poster image
   - Title (with episode/season labels)
   - Genres
-  - Season name
-  - Production year
-  - Description/overview
+  - Season/Episode Info
+  - Production Year
+  - Description/Overview
+  - Rating
 - 📱 Mobile-friendly layout with responsive design
 - 🔁 HTML auto-refresh interval (user-defined)
 - 🔄 Script update interval (user-defined)
+- ⚠️ Suppresses SSL warnings for self-hosted instances
+- ✅ Advanced Logic
+  - Computes an **MD5 hash** of the latest library response
+  - Stores the last hash in `jellyfin_last_hash.txt`
+  - Skips HTML generation if the library has not changed
 
 ---
 
