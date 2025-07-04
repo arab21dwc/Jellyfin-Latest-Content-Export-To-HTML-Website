@@ -17,6 +17,8 @@ This script connects to a Jellyfin server, retrieves the latest added **Movies**
   - Production Year
   - Description/Overview
   - Rating
+  - Runtime
+  - Added TMDB/IMDB Links to cards
 - 📱 Mobile-friendly layout with responsive design
 - 🔁 HTML auto-refresh interval (user-defined)
 - 🔄 Script update interval (user-defined)
@@ -45,7 +47,7 @@ You must replace these with valid Jellyfin server credentials:
 - **USER_ID**: ID of the Jellyfin user account.
 - **API_KEY**: API token for the user (generate via Jellyfin web UI).
 - **OUTPUT_FILE**: The name of the HTML file to generate.
-
+- **CHECKSUM_FILE**: "jellyfin_last_hash.txt"
 ---
 
 ## ▶️ How to Run
@@ -53,12 +55,12 @@ You must replace these with valid Jellyfin server credentials:
 ```bash
 python main.py
 ```
-
 When started, you will be prompted:
 
 ```text
 Enter how often to update the HTML for Library changes (in minutes): 
-Enter HTML auto-refresh interval (in seconds): 
+Enter HTML auto-refresh interval (in seconds):
+Enter how many latest items to fetch (default 50, max 100) 
 ```
 
 The script will then:
